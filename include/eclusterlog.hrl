@@ -1,0 +1,1 @@
+-record(eclusterlog, {id, node, type, msg, time}).

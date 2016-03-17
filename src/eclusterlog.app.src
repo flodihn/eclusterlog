@@ -1,0 +1,14 @@
+{application, eclusterlog,
+ [
+  {description, "An Erlang eclusterlog library"},
+  {vsn, "1"},
+  {modules, [
+             eclusterlog
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
