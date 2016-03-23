@@ -1,14 +1,15 @@
 {application, eclusterlog,
  [
-  {description, "An Erlang eclusterlog library"},
+  {description, "An clustered log library using mnesia."},
   {vsn, "1"},
   {modules, [
-             eclusterlog
+             eclusterlog, eclusterlog_handler
             ]},
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  mnesia
                  ]},
   {env, []}
  ]}.

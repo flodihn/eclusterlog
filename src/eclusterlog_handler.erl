@@ -70,10 +70,23 @@ code_change(_OldVsn, State, _Extra) ->
 log_error({_Pid, _Format, Data}) ->
     TransFun = fun() ->
         Id = mnesia:table_info(eclusterlog, size),
-        [_ErrorPid, Node, {{ErrorType, _}, ErrLine}] = Data,
         Time = erlang:timestamp(),
-        Record = #eclusterlog{id=Id, node=Node, type=ErrorType, msg=Data, time=Time},
-        mnesia:write(Record)
+        case Data of 
+            [_ErrorPid, Node, {{ErrorType, _}, _ErrLine}] ->
+                Record = #eclusterlog{
+                    id=Id,
+                    node=Node,
+                    type=term_to_list(ErrorType), 
+                    msg=term_to_list(Data),
+                    time=Time},
+                mnesia:write(Record);
+            OtherFormat ->
+                OtherRecord = #eclusterlog{
+                    id=Id,
+                    msg=term_to_list(OtherFormat),
+                    time=Time},
+                mnesia:write(OtherRecord)
+        end
     end,
     case mnesia:transaction(TransFun) of
         {atomic, _} ->
@@ -82,4 +95,6 @@ log_error({_Pid, _Format, Data}) ->
             error_logger:warning_report({?MODULE,
                 {failed_writing_log, Reason}})
     end.
- 
+
+term_to_list(Term) ->
+    list_to_binary(io_lib:format("~p", [Term])).
