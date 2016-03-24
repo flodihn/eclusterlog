@@ -61,8 +61,12 @@ fetch_logs() ->
     fetch_logs(100).
 
 fetch_logs(NumLogs) ->
-        First = mnesia:dirty_first(?TABLE),
-        fetch_logs(First, [], NumLogs).
+    %% This works because we use integers as keys.
+    LastKey = mnesia:table_info(?TABLE, size) - 1,
+    case LastKey >= 0 of
+        false -> [];
+        true -> fetch_logs(LastKey, [], NumLogs)
+    end.
 
 clear_logs() ->
     mnesia:clear_table(?TABLE).
@@ -96,14 +100,17 @@ fetch_logs(_Key, Logs, 0) ->
     lists:reverse(Logs);
 
 fetch_logs(Key, Logs, NumLogs) ->
-        NextKey = mnesia:dirty_next(?TABLE, Key),
-        case mnesia:dirty_read({?TABLE, Key}) of
-                [Record] ->
-                        fetch_logs(NextKey, [Record | Logs], NumLogs - 1);
-                [] ->
-                        fetch_logs(NextKey, Logs, NumLogs - 1)
-                end.
+    NextKey = mnesia:dirty_prev(?TABLE, Key),
+    case mnesia:dirty_read({?TABLE, Key}) of
+        [Record] ->
+            fetch_logs(NextKey, [Record | Logs], NumLogs - 1);
+        [] ->
+            fetch_logs(NextKey, Logs, NumLogs - 1)
+    end.
 
+%% ------------------------------------------------------------------
+%% Utility functions
+%% ------------------------------------------------------------------
 make_crash() ->
     F = fun() ->
         Foo = 3,
