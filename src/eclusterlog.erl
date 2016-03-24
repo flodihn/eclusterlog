@@ -7,14 +7,23 @@
 -export([
     init/0,
     create_db/0,
-    join_db/1]).
+    join_db/1,
+    fetch_logs/0,
+    fetch_logs/1,
+    clear_logs/0]).
 
+%% This function is supposed to crash and can be used to quickly test
+%% if the error logging works.
 -export([
-    test/0
+    make_crash/0
     ]).
 
 -include("eclusterlog.hrl").
+-define(TABLE, eclusterlog).
 
+%% ------------------------------------------------------------------
+%% High level functions
+%% ------------------------------------------------------------------
 init() ->
     application:load(eclusterlog),
     mnesia:start(),
@@ -36,18 +45,31 @@ create_db() ->
     mnesia:start(),
     mnesia:change_config(extra_db_nodes, [node()]),
     mnesia:change_table_copy_type(schema, node(), disc_copies),
-    mnesia:create_table(eclusterlog, [
+    mnesia:create_table(?TABLE, [
         {disc_copies, [node()]},
         {type, set},
-        {attributes, record_info(fields, eclusterlog)}]).
+        {attributes, record_info(fields, ?TABLE)}]).
 
 join_db(Node) ->
     mnesia:start(),
     mnesia:change_config(extra_db_nodes, [Node]),
     mnesia:change_table_copy_type(schema, node(), disc_copies),
-    rpc:call(Node, mnesia, add_table_copy, [eclusterlog,
+    rpc:call(Node, mnesia, add_table_copy, [?TABLE,
         node(), disc_copies]).
 
+fetch_logs() ->
+    fetch_logs(100).
+
+fetch_logs(NumLogs) ->
+        First = mnesia:dirty_first(?TABLE),
+        fetch_logs(First, [], NumLogs).
+
+clear_logs() ->
+    mnesia:clear_table(?TABLE).
+
+%% ------------------------------------------------------------------
+%% Mid level functions
+%% ------------------------------------------------------------------
 check_config() ->
     case {get_join_db(), table_exists()} of
         {{ok, JoinDb}, false} ->
@@ -58,17 +80,33 @@ check_config() ->
             pass     
     end.
 
+%% ------------------------------------------------------------------
+%% Low level functions
+%% ------------------------------------------------------------------
 get_join_db() ->
-    application:get_env(eclusterlog, join_db).
+    application:get_env(?TABLE, join_db).
 
 table_exists() ->
-    lists:member(eclusterlog, mnesia:system_info(tables)).
+    lists:member(?TABLE, mnesia:system_info(tables)).
 
-test() ->
+fetch_logs('$end_of_table', Logs, _NumLogs) ->
+    lists:reverse(Logs);
+
+fetch_logs(_Key, Logs, 0) ->
+    lists:reverse(Logs);
+
+fetch_logs(Key, Logs, NumLogs) ->
+        NextKey = mnesia:dirty_next(?TABLE, Key),
+        case mnesia:dirty_read({?TABLE, Key}) of
+                [Record] ->
+                        fetch_logs(NextKey, [Record | Logs], NumLogs - 1);
+                [] ->
+                        fetch_logs(NextKey, Logs, NumLogs - 1)
+                end.
+
+make_crash() ->
     F = fun() ->
         Foo = 3,
         Foo = 4
     end,
     spawn(F).
-
-
