@@ -70,7 +70,7 @@ code_change(_OldVsn, State, _Extra) ->
 log_error({_Pid, _Format, Data}) ->
     TransFun = fun() ->
         Id = mnesia:table_info(eclusterlog, size),
-        Time = get_timestamp(),
+        Time = calendar:local_time(),
         case Data of 
             [_ErrorPid, Node, {{ErrorType, _}, _ErrLine}] ->
                 Record = #eclusterlog{
@@ -98,9 +98,3 @@ log_error({_Pid, _Format, Data}) ->
 
 term_to_list(Term) ->
     list_to_binary(io_lib:format("~p", [Term])).
-
-get_timestamp() ->
-    case lists:member({timestamp, 0}, erlang:module_info(exports)) of
-        true -> erlang:timestamp();
-        false -> erlang:now()
-    end.         
