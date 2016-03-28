@@ -47,7 +47,7 @@ create_db() ->
     mnesia:change_table_copy_type(schema, node(), disc_copies),
     mnesia:create_table(?TABLE, [
         {disc_copies, [node()]},
-        {type, set},
+        {type, ordered_set},
         {attributes, record_info(fields, ?TABLE)}]).
 
 join_db(Node) ->
