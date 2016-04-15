@@ -88,13 +88,16 @@ log_error({_Pid, _Format, Data}) ->
                 mnesia:write(OtherRecord)
         end
     end,
-    case mnesia:transaction(TransFun) of
-        {atomic, _} ->
-            ok;
-        {aborted, Reason} ->
-            error_logger:warning_report({?MODULE,
-                {failed_writing_log, Reason}})
-    end.
+    try 
+        case mnesia:transaction(TransFun) of
+            {atomic, _} ->
+                ok;
+            {aborted, Reason} ->
+                pass
+        end
+    catch
+        _:_ -> pass
+    end.           
 
 term_to_list(Term) ->
     list_to_binary(io_lib:format("~p", [Term])).
